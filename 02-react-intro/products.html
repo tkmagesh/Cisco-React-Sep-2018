@@ -7,20 +7,46 @@
 	<script src="react-dom.development.js"></script>
 	<script src="babel.min.js"></script>
 	<script type="text/babel">
+		class EventEmitter{
+			_listeners = [];
+
+			subscribe(listenerFn){
+				this._listeners.push(listenerFn);
+			}
+
+			triggerChange(){
+				this._listeners.forEach(listenerFn => listenerFn());
+			}
+		}
+
+		class ProductsModel extends EventEmitter{
+			_list = [];
+
+			addNew(newProductName){
+				this._list.push(newProductName);
+				this.triggerChange();
+			}
+			getAll(){
+				return [...this._list];
+			}
+		}
+
+
 		class Products extends React.Component{
+			state = { newProductName : '' };
+
+			onAddNewClick = () => {
+				let { newProductName } = this.state;
+				this.props.model.addNew(newProductName);
+			}
 			render(){
-				let products = ['Pen', 'Pencil', 'Marker', 'Scribble Pad'];
-				/*let productItems = [];
-				for(let index = 0, count = products.length; index < count; index++){
-					let productItem = (<li key={index}>{products[index]}</li>);
-					productItems.push(productItem);
-				}*/
+				let products = this.props.model.getAll();
 				let productItems = products.map((product, index) => (<li key={index}>{product}</li>));
 				return(
 					<div>
 						<label>Product :</label>
-						<input type="text" />
-						<input type="button" value="Add New"/>
+						<input type="text" onChange={evt => this.setState({newProductName : evt.target.value})} />
+						<input type="button" value="Add New" onClick={this.onAddNewClick} />
 						<ol>
 							{productItems}
 						</ol>
@@ -29,8 +55,27 @@
 			}
 		}
 
-		ReactDOM.render(<Products />,
-			document.getElementById('root'));
+		class ProductsCount extends React.Component{
+			render(){
+				return(
+					<div>
+						<span>Products # : { this.props.data } </span>
+					</div>
+				)
+			}
+		}
+
+		let model = new ProductsModel();
+		function renderApp(){
+			ReactDOM.render(
+				<div>
+					<ProductsCount data={model.getAll().length}/>
+					<Products model={model}/>
+				</div>,
+				document.getElementById('root'));
+		}
+		renderApp();
+		model.subscribe(renderApp);
 	</script>
 </head>
 <body>
