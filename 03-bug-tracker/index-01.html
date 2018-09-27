@@ -53,14 +53,91 @@
 	<script src="react-dom.development.js"></script>
 	<script src="babel.min.js"></script>
 	<script type="text/babel">
-		class BugTracker extends React.Component{
+		class EventEmitter{
+			_listeners = [];
+
+			subscribe(listenerFn){
+				this._listeners.push(listenerFn);
+			}
+
+			triggerChange(){
+				this._listeners.forEach(listenerFn => listenerFn());
+			}
+		}
+
+		class BugModel{
+			name = '';
+			isClosed = false;
+			constructor(name){
+				this.name = name;
+			}
+			toggle(){
+				this.isClosed = !this.isClosed;
+				console.log(this);
+			}
+		}
+		class BugsCollectionModel extends EventEmitter{
+			_list = [];
+
+			addNew(bugName){
+				let newBug = new BugModel(bugName);
+				this._list.push(newBug);
+				this.triggerChange();
+			}
+
+			getAll(){
+				return [...this._list];
+			}
+
+			
+		}
+
+		class BugItem extends React.Component{
 			render(){
+				let { bug } = this.props;
+				return(
+					<li>
+						<span className="bugname" onClick={evt => bug.toggle()}>
+							{JSON.stringify(bug)}
+						</span>
+						<div className="datetime">[Created At]</div>
+					</li>
+				)
+			}
+		}
+
+		class BugList extends React.Component{
+			render(){
+				let { bugs } = this.props;
+				let bugItems = bugs.map((bug, index) =>(
+					<BugItem bug={bug} key={index}/>
+				));
+				return(
+					<section className="list">
+						<ol>
+							{bugItems}
+						</ol>
+						<input type="button" value="Remove Closed" />
+					</section>
+				)
+			}
+		}
+
+		class BugTracker extends React.Component{
+			state = { newBugName : ''};
+			onAddNewClick = () => {
+				this.props.model.addNew(this.state.newBugName);
+			}
+			render(){
+				let { model } = this.props,
+					bugs = model.getAll();
+					
 				return(
 					<div>
 						<section className="stats">
 							<span className="closed">1</span>
 							<span> / </span>
-							<span>2</span>
+							<span>{bugs.length}</span>
 						</section>
 						<section className="sort">
 							<label htmlFor="">Order By :</label>
@@ -73,29 +150,22 @@
 						</section>
 						<section className="edit">
 							<label htmlFor="">Bug Name :</label>
-							<input type="text" name="" id="" />
-							<input type="button" value="Add New" />
+							<input type="text" onChange={evt => this.setState({newBugName : evt.target.value})} />
+							<input type="button" value="Add New" onClick={this.onAddNewClick}/>
 						</section>
-						<section className="list">
-							<ol>
-								<li>
-									<span className="bugname">[This is bug 1]</span>
-									<div className="datetime">[Created At]</div>
-								</li>
-								<li>
-									<span className="bugname closed">[This is bug 2]</span>
-									<div className="datetime">[Created At]</div>
-								</li>
-							</ol>
-							<input type="button" value="Remove Closed" />
-						</section>
+						<BugList bugs={bugs} />
 					</div>
 				)
 			}
 		}
 
-		ReactDOM.render(<BugTracker />,
-			document.getElementById('root'));
+		let bugsCollection = new BugsCollectionModel();
+		function renderApp(){
+			ReactDOM.render(<BugTracker model={bugsCollection}/>,
+				document.getElementById('root'));
+		}
+		renderApp();
+		bugsCollection.subscribe(renderApp);
 	</script>
 </head>
 <body>
